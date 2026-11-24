@@ -5,7 +5,6 @@ using System.Text;
 using System.Net.Sockets;
 using System.Configuration;
 using System.Diagnostics;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Forms;
 using System.Threading;
 
@@ -50,7 +49,7 @@ namespace ChatTcpApp
                 Trace.TraceInformation("Message sent by client");
 
                 Thread.Sleep(3000); // Ne bontsuk hamar a kapcsolatot
-                //addMyMessageToTextBoxSafe(tbHistory, text);
+                //AddMyMessageToTextBoxSafe(tbHistory, text);
             }
             catch (Exception ex)
             {
@@ -66,17 +65,15 @@ namespace ChatTcpApp
             }
         }
 
-        private delegate void AddMyMessageToTextBoxSafe(TextBox tbMessages, string text);
-        private void addMyMessageToTextBoxSafe(TextBox tbMessages, string text)
+        private void AddMyMessageToTextBoxSafe(TextBox tbMessages, string text)
         {
             if (tbMessages.InvokeRequired)
             {
-                tbMessages.Invoke(new AddMyMessageToTextBoxSafe(addMyMessageToTextBoxSafe),
-                    tbMessages, text);
+                tbMessages.Invoke(AddMyMessageToTextBoxSafe, tbMessages, text);
             }
             else
             {
-                tbMessages.Text += String.Format("\r\n[Me]: {0}", text);
+                tbMessages.Text += $"\r\n[Me]: {text}";
                 tbMessages.SelectionStart = tbMessages.Text.Length;
                 tbMessages.ScrollToCaret();
             }

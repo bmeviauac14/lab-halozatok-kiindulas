@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Net;
 using System.Net.Sockets;
 using System.Windows.Forms;
 using System.Configuration;
 using System.Threading;
 using System.Diagnostics;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace ChatTcpApp
 {
@@ -33,7 +33,7 @@ namespace ChatTcpApp
             try
             {
                 int port = int.Parse(ConfigurationManager.AppSettings["port"]);
-                listener = new TcpListener(port);
+                listener = new TcpListener(IPAddress.Any, port);
                 listener.Start();
                 Trace.TraceInformation("Server has been started...");
             }
@@ -78,8 +78,8 @@ namespace ChatTcpApp
 
                 netStream = tcpClient.GetStream();
                 
-                //BinaryFormatter formatter = new BinaryFormatter();
-                //Message message = (Message)formatter.Deserialize(netStream);
+                //XmlSerializer serializer = new XmlSerializer(typeof(Message));
+                //Message message = (Message)serializer.Deserialize(netStream);
                 byte[] buff = new byte[2000000];
                 int lengtOfDataReceived = netStream.Read(buff, 0, 4);
                 if (lengtOfDataReceived != 4)
@@ -91,6 +91,8 @@ namespace ChatTcpApp
                 // Jó eséllyel nem érkezik meg egy lépésben az összes: vagyis jelen megoldásunk nem jó. 
                 // Helyett egy while ciklusban kellene dolgozni: addig olvasni és összefűzni az adatokat, míg 
                 // az összes várt meg nem érkezik.
+                // .NET 7 óta erre kész metódus is van: netStream.ReadExactly(buff, 0, lenght);
+                // Ez addig olvas, míg pontosan lenght bájt meg nem érkezik (vagy kivételt dob, ha a kapcsolat közben lezárul).
                 if (lengtOfDataReceived != lenght)
                     return;
 
@@ -98,7 +100,7 @@ namespace ChatTcpApp
 
                 string receivedText = text[0] + ".." + text[text.Length - 1] + ", " + text.Length;
 
-                //addMessageToTextBoxSafe(tbHistory, message, tcpClient.Client);
+                //AddMessageToTextBoxSafe(tbHistory, message, tcpClient.Client);
             }
             catch (Exception ex)
             {
@@ -113,18 +115,15 @@ namespace ChatTcpApp
             }
         }
 
-        private delegate void AddMessageToTextBoxSafe(TextBox tbMessages, Message message, Socket client);
-        private void addMessageToTextBoxSafe(TextBox tbMessages, Message message, Socket client)
+        private void AddMessageToTextBoxSafe(TextBox tbMessages, Message message, Socket client)
         {
             if (tbMessages.InvokeRequired)
             {
-                tbMessages.Invoke(new AddMessageToTextBoxSafe(addMessageToTextBoxSafe),
-                    tbMessages, message, client);
+                tbMessages.Invoke(AddMessageToTextBoxSafe, tbMessages, message, client);
             }
             else
             {
-                tbMessages.Text += String.Format("\r\n{0} ({1}): {2}", 
-                    message.Sender, client.RemoteEndPoint, message.Text);
+                tbMessages.Text += $"\r\n{message.Sender} ({client.RemoteEndPoint}): {message.Text}";
                 tbMessages.SelectionStart = tbMessages.Text.Length;
                 tbMessages.ScrollToCaret();
             }

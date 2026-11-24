@@ -5,10 +5,9 @@ using System.Text;
 using System.Net.Sockets;
 using System.Configuration;
 using System.Diagnostics;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Forms;
 using System.Threading;
-using Newtonsoft.Json;
+using System.Text.Json;
 using System.IO;
 
 namespace ChatTcpApp
@@ -45,18 +44,18 @@ namespace ChatTcpApp
                 netStream = client.GetStream();
                 Message message = new Message(myName, text);
 
-                //BinaryFormatter formatter = new BinaryFormatter();
-                //formatter.Serialize(netStream, message);
+                //XmlSerializer serializer = new XmlSerializer(typeof(Message));
+                //serializer.Serialize(netStream, message);
 
                 using (StreamWriter sw = new StreamWriter(netStream))
                 {
-                    // A JsonConvert.SerializeObject escape-eli a tartalomban levő sortöréseket.
-                    string dataToSend = JsonConvert.SerializeObject(message);
+                    // A JsonSerializer.Serialize escape-eli a tartalomban levő sortöréseket.
+                    string dataToSend = JsonSerializer.Serialize(message);
                     sw.WriteLine(dataToSend);
                 }
 
                 Trace.TraceInformation("Message sent by client");
-                addMyMessageToTextBoxSafe(tbHistory, message.Text);
+                AddMyMessageToTextBoxSafe(tbHistory, message.Text);
             }
             catch (Exception ex)
             {
@@ -72,17 +71,15 @@ namespace ChatTcpApp
             }
         }
 
-        private delegate void AddMyMessageToTextBoxSafe(TextBox tbMessages, string text);
-        private void addMyMessageToTextBoxSafe(TextBox tbMessages, string text)
+        private void AddMyMessageToTextBoxSafe(TextBox tbMessages, string text)
         {
             if (tbMessages.InvokeRequired)
             {
-                tbMessages.Invoke(new AddMyMessageToTextBoxSafe(addMyMessageToTextBoxSafe),
-                    tbMessages, text);
+                tbMessages.Invoke(AddMyMessageToTextBoxSafe, tbMessages, text);
             }
             else
             {
-                tbMessages.Text += String.Format("\r\n[Me]: {0}", text);
+                tbMessages.Text += $"\r\n[Me]: {text}";
                 tbMessages.SelectionStart = tbMessages.Text.Length;
                 tbMessages.ScrollToCaret();
             }
